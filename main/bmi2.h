@@ -61,8 +61,9 @@ esp_err_t bmi2_get_raw_acce(bmi2_handle_t sensor, bmi2_raw_acce_value_t *const r
 
 esp_err_t bmi2_get_acce(bmi2_handle_t sensor, bmi2_acce_value_t *const acce_value);
 
-float bmi2_get_inclination(bmi2_acce_value_t const acce_value);
+float bmi2_get_inclination(float acce_value);
 
+bool averaging_acce(bmi2_acce_value_t *acce_value, int size, float *return_avg);
 #ifdef __cplusplus
 }
 #endif

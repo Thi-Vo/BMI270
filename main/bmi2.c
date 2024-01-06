@@ -114,7 +114,7 @@ static esp_err_t bmi2_read(bmi2_handle_t sensor, const uint8_t reg_start_addr, u
 }
 
 //Burst write config file to bmi270. The config array in config_file.h
-esp_err_t load_config(bmi2_handle_t sensor, const uint8_t* input)
+static esp_err_t load_config(bmi2_handle_t sensor, const uint8_t* input)
 {
 	uint8_t init_val_0 = 0;
 	uint8_t init_val_1 = 0;
@@ -162,7 +162,6 @@ bmi2_handle_t bmi2_create(i2c_port_t port, const uint16_t sensor_addr)
     sensor->dt = 0;
     sensor->timer = (struct timeval *) calloc(1, sizeof(struct timeval));
     return (bmi2_handle_t) sensor;
-
 }
 
 void bmi2_delete(bmi2_handle_t sensor)
@@ -281,17 +280,7 @@ esp_err_t bmi2_get_acce(bmi2_handle_t sensor, bmi2_acce_value_t *const acce_valu
     return ret;
 }
 
-float bmi2_get_inclination(bmi2_acce_value_t acce_value)
-{
-	float acce_z = 0;
-	if(acce_value.acce_z < 0) acce_z = -acce_value.acce_z;		//make it positive
-	else acce_z = acce_value.acce_z;
 
-	if(acce_z > 1){
-		return 90.0 - acosf(acce_z - 1)*RAD_TO_DEGREE;
-	}
-	return acosf(acce_z)*RAD_TO_DEGREE;
-}
 //esp_err_t bmi2_get_raw_gyro(bmi2_handle_t sensor, bmi2_raw_gyro_value_t *const raw_gyro_value)
 //{
 //    uint8_t data_rd[6];
@@ -324,3 +313,51 @@ float bmi2_get_inclination(bmi2_acce_value_t acce_value)
 //    acce_value->acce_z = raw_acce.raw_acce_z * acce_sensitivity;
 //    return ESP_OK;
 //}
+
+
+/*
+ * The function below is used to check anomaly and averaging data
+ */
+static float square(float x)
+{
+	return x*x;
+}
+
+float bmi2_get_inclination(float acce_value)
+{
+	float acce_z = 0;
+	if(acce_value < 0) acce_z = -acce_value;		//make it positive
+	else acce_z = acce_value;
+
+	if(acce_z > 1){
+		return 90.0 - acosf(acce_z - 1)*RAD_TO_DEGREE;
+	}
+	return acosf(acce_z)*RAD_TO_DEGREE;
+}
+
+//Get avg of the data, checking for outlier using avg and variance
+//IF ok, return true
+//else, return false
+bool averaging_acce(bmi2_acce_value_t *acce_value, int size, float *return_avg)
+{
+	float avg = 0;
+	float variance = 0;
+	float max_error = 0.005;	//0.5%
+	for(int i=0;i<size;i++)
+	{
+		avg = avg + (acce_value + i)->acce_z;
+	}
+	avg = avg/(float)size;
+
+	for(int i=0;i<size;i++)
+	{
+		variance = variance + square(avg - (acce_value+i)->acce_z);
+	}
+	variance = variance/(float)size;
+//	printf("avg: %.5f ---------- variance: %.5f \n\n", avg, variance);
+	if(variance/avg < max_error){
+		*return_avg = avg;
+		return true;
+	}
+	return false;
+}

@@ -55,27 +55,35 @@ void read_acceleration(void* pvParameter)
 {
 	esp_err_t ret;
 	uint8_t bmi2_deviceid;
-	bmi2_acce_value_t acce;
+	bmi2_acce_value_t acce[5];
+	float acce_avg;
 	float inclination;
-
+	int number_of_sample = 5;
 	//init
 	bmi2_init();
 
 	ret = bmi2_get_deviceid(bmi2, &bmi2_deviceid);
 	assert(ret == ESP_OK);
+	assert(bmi2_deviceid == bmi2_WHO_AM_I_VAL);
 
 	while(1)
 	{
-		ret = bmi2_get_acce(bmi2, &acce);
-		TEST_ASSERT_EQUAL(ESP_OK, ret);
-		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+		get_data_to_array:for(int i=0;i<number_of_sample;i++)
+		{
+			ret = bmi2_get_acce(bmi2, acce+i);
+			assert(ESP_OK == ret);
+			vTaskDelay(pdMS_TO_TICKS(15));				//the delay depend on sample rate, here 100Hz -> minimum delay 10ms
+		}
+		if(averaging_acce(acce,number_of_sample,&acce_avg) == false) goto get_data_to_array;
 
-		inclination = bmi2_get_inclination(acce);
+//		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+
+		inclination = bmi2_get_inclination(acce_avg);
 		printf("DO nghieng: %.2f*\n\n", inclination);
+
+
 		vTaskDelay(pdMS_TO_TICKS(10000));
 	}
-
-
 
 	bmi2_delete(bmi2);
 	ret = i2c_driver_delete(I2C_MASTER_NUM);
