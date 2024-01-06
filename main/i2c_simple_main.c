@@ -51,9 +51,8 @@ static void bmi2_init(void)
 
 }
 
-void app_main(void)
+void read_acceleration(void* pvParameter)
 {
-
 	esp_err_t ret;
 	uint8_t bmi2_deviceid;
 	bmi2_acce_value_t acce;
@@ -63,22 +62,17 @@ void app_main(void)
 	bmi2_init();
 
 	ret = bmi2_get_deviceid(bmi2, &bmi2_deviceid);
-	TEST_ASSERT_EQUAL(ESP_OK, ret);
-	TEST_ASSERT_EQUAL_UINT8_MESSAGE(bmi2_WHO_AM_I_VAL, bmi2_deviceid, "Who Am I register does not contain expected data");
-	printf("%" PRIu8 " \n", bmi2_deviceid);
+	assert(ret == ESP_OK);
 
 	while(1)
 	{
 		ret = bmi2_get_acce(bmi2, &acce);
 		TEST_ASSERT_EQUAL(ESP_OK, ret);
-//		ESP_LOGI(TAG, "acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
-//		printf("acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
-//		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.raw_acce_x/resolution, acce.raw_acce_y/resolution, acce.raw_acce_z/resolution);
 		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.acce_x, acce.acce_y, acce.acce_z);
 
 		inclination = bmi2_get_inclination(acce);
 		printf("DO nghieng: %.2f*\n\n", inclination);
-		vTaskDelay(pdMS_TO_TICKS(5000));
+		vTaskDelay(pdMS_TO_TICKS(10000));
 	}
 
 
@@ -86,4 +80,49 @@ void app_main(void)
 	bmi2_delete(bmi2);
 	ret = i2c_driver_delete(I2C_MASTER_NUM);
 	TEST_ASSERT_EQUAL(ESP_OK, ret);
+	vTaskDelete(NULL);
+}
+//void app_main(void)
+//{
+//
+//	esp_err_t ret;
+//	uint8_t bmi2_deviceid;
+//	bmi2_acce_value_t acce;
+//	float inclination;
+//
+//	//init
+//	bmi2_init();
+//
+//	ret = bmi2_get_deviceid(bmi2, &bmi2_deviceid);
+//	TEST_ASSERT_EQUAL(ESP_OK, ret);
+//	TEST_ASSERT_EQUAL_UINT8_MESSAGE(bmi2_WHO_AM_I_VAL, bmi2_deviceid, "Who Am I register does not contain expected data");
+//	printf("%" PRIu8 " \n", bmi2_deviceid);
+//
+//	while(1)
+//	{
+//		ret = bmi2_get_acce(bmi2, &acce);
+//		TEST_ASSERT_EQUAL(ESP_OK, ret);
+////		ESP_LOGI(TAG, "acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+////		printf("acce_x:%.2f, acce_y:%.2f, acce_z:%.2f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+////		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.raw_acce_x/resolution, acce.raw_acce_y/resolution, acce.raw_acce_z/resolution);
+//		printf("acce_x:%.5f, acce_y:%.5f, acce_z:%.5f\n", acce.acce_x, acce.acce_y, acce.acce_z);
+//
+//		inclination = bmi2_get_inclination(acce);
+//		printf("DO nghieng: %.2f*\n\n", inclination);
+//		vTaskDelay(pdMS_TO_TICKS(5000));
+//	}
+//
+//
+//
+//	bmi2_delete(bmi2);
+//	ret = i2c_driver_delete(I2C_MASTER_NUM);
+//	TEST_ASSERT_EQUAL(ESP_OK, ret);
+//}
+
+
+
+void app_main(void)
+{
+//	printf("dtgtgt\n");
+	xTaskCreate(read_acceleration, "bmi270", 10240, NULL, 10, NULL);
 }
